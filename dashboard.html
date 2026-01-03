@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="styles.css" />
+  <title>GraduateThesisDB – Dashboard</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Graduate Thesis System</h1>
+        <p>GraduateThesisDB – Admin UI</p>
+      </div>
+
+      <nav class="nav">
+        <a class="active" href="dashboard.html">📊 Dashboard</a>
+        <a href="theses.html">📚 Theses</a>
+        <a href="people.html">👤 People</a>
+        <a href="lookups.html">🧩 Lookups</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="title">
+          <h2>Dashboard</h2>
+          <p>High-level overview for report screenshots (counts come from DB in real implementation).</p>
+        </div>
+        <div class="actions">
+          <button class="btn">Export PDF</button>
+          <button class="btn primary" onclick="location.href='theses.html'">Open Theses</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card col-3">
+          <h3>Total Theses</h3>
+          <div class="kpi" id="kpiTheses">–</div>
+          <div class="sub">From THESIS table</div>
+        </div>
+
+        <div class="card col-3">
+          <h3>Total People</h3>
+          <div class="kpi" id="kpiPeople">–</div>
+          <div class="sub">From PERSON table</div>
+        </div>
+
+        <div class="card col-3">
+          <h3>Total Institutes</h3>
+          <div class="kpi" id="kpiInstitutes">–</div>
+          <div class="sub">From INSTITUTE table</div>
+        </div>
+
+        <div class="card col-3">
+          <h3>Total Universities</h3>
+          <div class="kpi" id="kpiUniversities">–</div>
+          <div class="sub">From UNIVERSITY table</div>
+        </div>
+
+        <div class="card col-12">
+          <h3>Design Note</h3>
+          <p style="margin:0; color:var(--muted)">
+            The UI maps directly to the database schema: THESIS (main entity) and M:N relations
+            (THESIS_SUBJECT, THESIS_KEYWORD, THESIS_PERSON_ROLE). In implementation, all create/update
+            actions run inside transactions to avoid partial data writes.
+          </p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const API_BASE = "https://localhost:7189/api";
+    async function apiFetch(url){
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    }
+    async function loadCounts(){
+      try{
+        const [theses, people, institutes, universities] = await Promise.all([
+          apiFetch(`${API_BASE}/theses`),
+          apiFetch(`${API_BASE}/people`),
+          apiFetch(`${API_BASE}/institutes`),
+          apiFetch(`${API_BASE}/universities`)
+        ]);
+        document.getElementById("kpiTheses").textContent = (theses || []).length;
+        document.getElementById("kpiPeople").textContent = (people || []).length;
+        document.getElementById("kpiInstitutes").textContent = (institutes || []).length;
+        document.getElementById("kpiUniversities").textContent = (universities || []).length;
+      }catch(e){
+        console.warn("Dashboard counts could not be loaded:", e);
+      }
+    }
+    loadCounts();
+  </script>
+</body>
+</html>

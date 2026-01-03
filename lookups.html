@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="styles.css" />
+  <title>GraduateThesisDB – Lookups</title>
+  <style>
+    /* Make cards fit better on the page and prevent horizontal overflow */
+    .grid-cards{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
+    @media (max-width: 1100px){ .grid-cards{ grid-template-columns: 1fr; } }
+
+    /* Compact lookups UI (less empty space, less scrolling) */
+    .grid-cards .card{ padding:12px; }
+    .grid-cards .card-header{ margin-bottom:8px; }
+    .grid-cards .card-header h3{ margin:0; }
+
+    /* Only allow horizontal scroll if really needed (avoid tall inner scrollbars) */
+    .card-body{ overflow-x:auto; overflow-y:visible; }
+
+    .mini-table{ width:100%; border-collapse: collapse; table-layout: fixed; min-width:0 !important; }
+    .mini-table th, .mini-table td{
+      padding:6px 8px;
+      border-bottom: 1px solid rgba(2,6,23,0.08);
+      text-align:left;
+      vertical-align: top;
+      word-break: break-word;
+      line-height:1.25;
+    }
+    .mini-table th{ font-size:12px; color:var(--muted); font-weight:800; text-transform: uppercase; letter-spacing: .06em; }
+    .mini-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+    /* Smaller action buttons so the Actions column doesn't feel "too far" */
+    .mini-actions .btn{ padding:6px 10px; font-size:12px; border-radius:12px; }
+    .modal-content.medium{ width: min(640px, calc(100vw - 24px)); }
+    .err{ color: var(--danger); font-size: 12px; margin-top:6px; display:none; }
+    .err.show{ display:block; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Graduate Thesis System</h1>
+        <p>Lookup Tables (Parent Tables)</p>
+      </div>
+
+      <nav class="nav">
+        <a href="dashboard.html">📊 Dashboard</a>
+        <a href="theses.html">📚 Theses</a>
+        <a href="people.html">👤 People</a>
+        <a class="active" href="lookups.html">🧩 Lookups</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2>Lookups</h2>
+          <p class="muted">Manage parent tables (University, Institute, Subject, Keyword, Language, Thesis Type).</p>
+        </div>
+      </header>
+
+      <section class="grid-cards">
+        <div class="card" data-entity="universities">
+          <div class="card-header">
+            <h3>Universities</h3>
+            <div class="card-actions">
+              <button class="btn primary" data-add="universities">➕ Add</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="mini-table">
+              <thead><tr><th style="width:60px;">ID</th><th>Name</th><th style="width:110px;">Actions</th></tr></thead>
+              <tbody id="tbl-universities"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" data-entity="institutes">
+          <div class="card-header">
+            <h3>Institutes</h3>
+            <div class="card-actions">
+              <button class="btn primary" data-add="institutes">➕ Add</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="mini-table">
+              <thead><tr><th style="width:60px;">ID</th><th>Name</th><th>University</th><th style="width:110px;">Actions</th></tr></thead>
+              <tbody id="tbl-institutes"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" data-entity="subjects">
+          <div class="card-header">
+            <h3>Subjects</h3>
+            <div class="card-actions">
+              <button class="btn primary" data-add="subjects">➕ Add</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="mini-table">
+              <thead><tr><th style="width:60px;">ID</th><th>Name</th><th style="width:110px;">Actions</th></tr></thead>
+              <tbody id="tbl-subjects"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" data-entity="keywords">
+          <div class="card-header">
+            <h3>Keywords</h3>
+            <div class="card-actions">
+              <button class="btn primary" data-add="keywords">➕ Add</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="mini-table">
+              <thead><tr><th style="width:60px;">ID</th><th>Name</th><th style="width:110px;">Actions</th></tr></thead>
+              <tbody id="tbl-keywords"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" data-entity="languages">
+          <div class="card-header">
+            <h3>Languages</h3>
+            <div class="card-actions">
+              <button class="btn primary" data-add="languages">➕ Add</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="mini-table">
+              <thead><tr><th style="width:60px;">ID</th><th>Name</th><th style="width:110px;">Actions</th></tr></thead>
+              <tbody id="tbl-languages"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" data-entity="thesisTypes">
+          <div class="card-header">
+            <h3>Thesis Types</h3>
+            <div class="card-actions">
+              <button class="btn primary" data-add="thesisTypes">➕ Add</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="mini-table">
+              <thead><tr><th style="width:60px;">ID</th><th>Name</th><th style="width:110px;">Actions</th></tr></thead>
+              <tbody id="tbl-thesisTypes"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+
+  <!-- ADD/EDIT MODAL -->
+  <div id="editModal" class="modal-overlay" onclick="closeIfOverlay(event, 'editModal')">
+    <div class="modal" style="width:min(640px, calc(100vw - 24px));">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div style="min-width:0;">
+          <h3 id="mTitle" style="margin:0 0 6px 0;">Edit</h3>
+          <p id="mSub" class="muted" style="margin:0;">Lookup record</p>
+        </div>
+        <button class="btn" onclick="closeModal('editModal')" title="Close">✕</button>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="field" id="rowUniversity" style="display:none;">
+          <label>University <span class="req">*</span></label>
+          <select id="mUniversity"></select>
+          <div class="err" id="eUniversity">University is required.</div>
+        </div>
+
+        <div class="field">
+          <label>Name <span class="req">*</span></label>
+          <input id="mName" type="text" placeholder="Name" />
+          <div class="err" id="eName">Name is required.</div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:16px;">
+        <button class="btn" onclick="closeModal('editModal')">Cancel</button>
+        <button class="btn primary" id="mSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE CONFIRM -->
+  <div id="deleteModal" class="modal-overlay" onclick="closeIfOverlay(event, 'deleteModal')">
+    <div class="modal" style="width:min(520px, calc(100vw - 24px));">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div style="min-width:0;">
+          <h3 style="margin:0 0 6px 0;">Delete</h3>
+          <p class="muted" style="margin:0;">Are you sure you want to delete this item?</p>
+        </div>
+        <button class="btn" onclick="closeModal('deleteModal')" title="Close">✕</button>
+      </div>
+
+      <div style="margin-top:14px;">
+        <p id="delInfo" style="font-weight:800; margin:0 0 10px 0;"></p>
+        <p class="muted" style="margin:0;">Note: In a real DB, FK constraints may prevent deletes if referenced by theses.</p>
+      </div>
+
+      <div class="row" style="margin-top:16px;">
+        <button class="btn" onclick="closeModal('deleteModal')">Cancel</button>
+        <button class="btn danger" id="btnConfirmDelete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  
+<script>
+  const API_BASE = "https://localhost:7189/api";
+
+  function byId(id){ return document.getElementById(id); }
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  async function apiFetch(url, options){
+    const res = await fetch(url, options);
+    if(!res.ok){
+      let msg = `HTTP ${res.status}`;
+      try{
+        const t = await res.text();
+        if(t) msg = t;
+      }catch{}
+      throw new Error(msg);
+    }
+    if(res.status === 204) return null;
+    const ct = res.headers.get("content-type") || "";
+    if(ct.includes("application/json")) return await res.json();
+    return await res.text();
+  }
+
+  // -------- Entity Config (matches your controllers) --------
+  const entities = {
+    universities: { 
+      tableId: "tbl-universities",
+      endpoint: "universities",
+      key: "universityId",
+      nameField: "name",
+      title: "University",
+      needsUniversity: false,
+      mapIn: (x) => ({ id: x.universityId ?? x.UniversityId ?? x.UniversityID, name: x.name ?? x.Name }),
+      mapPayload: (name) => ({ name })
+    },
+    institutes: {
+      tableId: "tbl-institutes",
+      endpoint: "institutes",
+      key: "instituteId",
+      nameField: "name",
+      title: "Institute",
+      needsUniversity: true,
+      mapIn: (x) => ({
+        id: x.instituteId ?? x.InstituteId ?? x.InstituteID,
+        name: x.name ?? x.Name,
+        universityId: x.universityId ?? x.UniversityId ?? x.UniversityID,
+        universityName: x.universityName ?? x.UniversityName ?? x.university?.name ?? x.University?.Name
+      }),
+      mapPayload: (name, universityId) => ({ name, universityId })
+    },
+    subjects: {
+      tableId: "tbl-subjects",
+      endpoint: "subjects",
+      key: "subjectId",
+      nameField: "name",
+      title: "Subject",
+      needsUniversity: false,
+      mapIn: (x) => ({ id: x.subjectId ?? x.SubjectId ?? x.SubjectID, name: x.name ?? x.Name }),
+      mapPayload: (name) => ({ name })
+    },
+    keywords: {
+      tableId: "tbl-keywords",
+      endpoint: "keywords",
+      key: "keywordId",
+      nameField: "name",
+      title: "Keyword",
+      needsUniversity: false,
+      mapIn: (x) => ({ id: x.keywordId ?? x.KeywordId ?? x.KeywordID, name: x.name ?? x.Name }),
+      mapPayload: (name) => ({ name })
+    },
+    languages: {
+      tableId: "tbl-languages",
+      endpoint: "languages",
+      key: "languageId",
+      nameField: "name",
+      title: "Language",
+      needsUniversity: false,
+      mapIn: (x) => ({ id: x.languageId ?? x.LanguageId ?? x.LanguageID, name: x.name ?? x.Name }),
+      mapPayload: (name) => ({ name })
+    },
+    thesisTypes: {
+      tableId: "tbl-thesisTypes",
+      endpoint: "thesisTypes",
+      key: "typeId",
+      nameField: "typeName",
+      title: "Thesis Type",
+      needsUniversity: false,
+      mapIn: (x) => ({ id: x.typeId ?? x.TypeId ?? x.TypeID, name: x.typeName ?? x.TypeName ?? x.name ?? x.Name }),
+      mapPayload: (name) => ({ typeName: name, name }) // support either
+    }
+  };
+
+  // -------- App State --------
+  let cache = {
+    universities: [],
+    institutes: [],
+    subjects: [],
+    keywords: [],
+    languages: [],
+    thesisTypes: []
+  };
+
+  let modalState = { entity: null, mode: "add", editingId: null };
+  let deleteState = { entity: null, id: null };
+
+  // -------- Modal helpers --------
+  function openModal(id){ byId(id).classList.add("active"); }
+  function closeModal(id){ byId(id).classList.remove("active"); }
+  function closeIfOverlay(e, id){ if(e.target && e.target.id === id) closeModal(id); }
+
+  window.closeIfOverlay = closeIfOverlay;
+  window.closeModal = closeModal;
+
+  function hideErrors(){
+    byId("eName").classList.remove("show");
+    byId("eUniversity").classList.remove("show");
+  }
+
+  function fillSelect(selectEl, items, getValue, getText, placeholder="Select..."){
+    selectEl.innerHTML = "";
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = placeholder;
+    selectEl.appendChild(opt);
+    items.forEach(it => {
+      const o = document.createElement("option");
+      o.value = String(getValue(it));
+      o.textContent = getText(it);
+      selectEl.appendChild(o);
+    });
+  }
+
+  function validateModal(){
+    const name = byId("mName").value.trim();
+    const entity = modalState.entity;
+
+    let ok = true;
+    if(!name){ byId("eName").classList.add("show"); ok = false; }
+    else byId("eName").classList.remove("show");
+
+    if(entity === "institutes"){
+      const uniId = Number(byId("mUniversity").value || 0);
+      if(!uniId){ byId("eUniversity").classList.add("show"); ok = false; }
+      else byId("eUniversity").classList.remove("show");
+    }
+    return ok;
+  }
+
+  // -------- Load from API --------
+  async function loadEntity(entity){
+    const cfg = entities[entity];
+    const raw = await apiFetch(`${API_BASE}/${cfg.endpoint}`);
+    cache[entity] = (raw || []).map(cfg.mapIn).filter(x => x.id != null);
+  }
+
+  async function loadAll(){
+    await Promise.all(Object.keys(entities).map(loadEntity));
+  }
+
+  // -------- Render --------
+  function renderAll(){
+    Object.keys(entities).forEach(entity => {
+      const cfg = entities[entity];
+      const tbody = byId(cfg.tableId);
+      tbody.innerHTML = "";
+
+      const rows = [...(cache[entity] || [])].sort((a,b) => Number(a.id) - Number(b.id));
+
+      rows.forEach(r => {
+        const tr = document.createElement("tr");
+
+        if(entity === "institutes"){
+          tr.innerHTML = `
+            <td>${r.id}</td>
+            <td>${escapeHtml(r.name)}</td>
+            <td>${escapeHtml(r.universityName ?? "")}</td>
+            <td>
+              <div class="mini-actions">
+                <button class="btn" data-edit="${entity}" data-id="${r.id}">Edit</button>
+                <button class="btn danger" data-del="${entity}" data-id="${r.id}">Delete</button>
+              </div>
+            </td>
+          `;
+        } else {
+          tr.innerHTML = `
+            <td>${r.id}</td>
+            <td>${escapeHtml(r.name)}</td>
+            <td>
+              <div class="mini-actions">
+                <button class="btn" data-edit="${entity}" data-id="${r.id}">Edit</button>
+                <button class="btn danger" data-del="${entity}" data-id="${r.id}">Delete</button>
+              </div>
+            </td>
+          `;
+        }
+
+        tbody.appendChild(tr);
+      });
+    });
+
+    // attach handlers
+    document.querySelectorAll("[data-add]").forEach(btn => {
+      btn.onclick = () => openAdd(btn.getAttribute("data-add"));
+    });
+    document.querySelectorAll("[data-edit]").forEach(btn => {
+      btn.onclick = () => openEdit(btn.getAttribute("data-edit"), Number(btn.getAttribute("data-id")));
+    });
+    document.querySelectorAll("[data-del]").forEach(btn => {
+      btn.onclick = () => openDelete(btn.getAttribute("data-del"), Number(btn.getAttribute("data-id")));
+    });
+  }
+
+  // -------- Modal openers --------
+  function openAdd(entity){
+    const cfg = entities[entity];
+    modalState = { entity, mode: "add", editingId: null };
+
+    byId("mTitle").textContent = `Add ${cfg.title}`;
+    byId("mSub").textContent = "Create a new record";
+    byId("mName").value = "";
+    hideErrors();
+
+    const isInstitute = entity === "institutes";
+    byId("rowUniversity").style.display = isInstitute ? "block" : "none";
+    if(isInstitute){
+      fillSelect(byId("mUniversity"), cache.universities, u => u.id, u => u.name, "Select university");
+      byId("mUniversity").value = "";
+    }
+
+    openModal("editModal");
+  }
+
+  function openEdit(entity, id){
+    const cfg = entities[entity];
+    const rec = (cache[entity] || []).find(x => Number(x.id) === Number(id));
+    if(!rec) return;
+
+    modalState = { entity, mode: "edit", editingId: id };
+
+    byId("mTitle").textContent = `Edit ${cfg.title}`;
+    byId("mSub").textContent = `${cfg.title} ID: ${id}`;
+    byId("mName").value = rec.name || "";
+    hideErrors();
+
+    const isInstitute = entity === "institutes";
+    byId("rowUniversity").style.display = isInstitute ? "block" : "none";
+    if(isInstitute){
+      fillSelect(byId("mUniversity"), cache.universities, u => u.id, u => u.name, "Select university");
+      byId("mUniversity").value = String(rec.universityId ?? "");
+    }
+
+    openModal("editModal");
+  }
+
+  function openDelete(entity, id){
+    deleteState = { entity, id };
+    const cfg = entities[entity];
+    const rec = (cache[entity] || []).find(x => Number(x.id) === Number(id));
+    byId("delInfo").textContent = rec ? `${cfg.title}: ${rec.name} (ID ${id})` : `ID ${id}`;
+    openModal("deleteModal");
+  }
+
+  // -------- Save / Delete --------
+  async function saveModal(){
+    if(!validateModal()) return;
+
+    const entity = modalState.entity;
+    const cfg = entities[entity];
+    const name = byId("mName").value.trim();
+
+    try{
+      if(modalState.mode === "add"){
+        const payload = cfg.needsUniversity
+          ? cfg.mapPayload(name, Number(byId("mUniversity").value))
+          : cfg.mapPayload(name);
+
+        await apiFetch(`${API_BASE}/${cfg.endpoint}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+      } else {
+        const payload = cfg.needsUniversity
+          ? cfg.mapPayload(name, Number(byId("mUniversity").value))
+          : cfg.mapPayload(name);
+
+        await apiFetch(`${API_BASE}/${cfg.endpoint}/${modalState.editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      closeModal("editModal");
+      await refresh();
+    }catch(err){
+      alert(`API error: ${err.message}`);
+    }
+  }
+
+  async function confirmDelete(){
+    const { entity, id } = deleteState;
+    if(!entity || !id) return;
+    const cfg = entities[entity];
+
+    try{
+      await apiFetch(`${API_BASE}/${cfg.endpoint}/${id}`, { method: "DELETE" });
+      closeModal("deleteModal");
+      deleteState = { entity: null, id: null };
+      await refresh();
+    }catch(err){
+      alert(`Delete failed: ${err.message}`);
+    }
+  }
+
+  async function refresh(){
+    try{
+      await loadAll();
+      renderAll();
+    }catch(err){
+      alert(`API error while loading lookups: ${err.message}`);
+    }
+  }
+
+  // wire modal buttons
+  byId("mSave").addEventListener("click", saveModal);
+  byId("btnConfirmDelete").addEventListener("click", confirmDelete);
+
+  // initial load
+  refresh();
+</script>
+
+</body>
+</html>

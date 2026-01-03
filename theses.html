@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="styles.css" />
+  <title>GraduateThesisDB – Theses</title>
+
+  <style>
+    .req { color: var(--danger); font-weight: 900; }
+    .row-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .error-text { color: var(--danger); font-size: 12px; margin-top: 6px; display:none; }
+    .error-text.show { display:block; }
+    .inline-note { color:var(--muted); font-size:12px; margin-top:10px; line-height:1.4; }
+
+    .filters-grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap:12px;
+    }
+    .filters-grid .col-3{ grid-column: span 3; }
+    .filters-grid .col-4{ grid-column: span 4; }
+    .filters-grid .col-6{ grid-column: span 6; }
+    .filters-grid .col-12{ grid-column: span 12; }
+    @media (max-width: 1024px){
+      .filters-grid{ grid-template-columns: repeat(6, 1fr); }
+      .filters-grid .col-3{ grid-column: span 3; }
+      .filters-grid .col-4{ grid-column: span 6; }
+      .filters-grid .col-6{ grid-column: span 6; }
+      .filters-grid .col-12{ grid-column: span 6; }
+    }
+    @media (max-width: 640px){
+      .filters-grid{ grid-template-columns: repeat(1, 1fr); }
+      .filters-grid .col-3,
+      .filters-grid .col-4,
+      .filters-grid .col-6,
+      .filters-grid .col-12{ grid-column: span 1; }
+    }
+
+    .title-link{
+      color: var(--primary);
+      cursor:pointer;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .title-link:hover{ text-decoration: underline; }
+
+    .detail-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    .detail-grid .full{ grid-column: 1 / -1; }
+    .kv{
+      background: rgba(2,6,23,0.03);
+      border: 1px solid rgba(2,6,23,0.06);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+    .kv .k{ font-size:12px; color:var(--muted); }
+    .kv .v{ margin-top:6px; font-weight:700; color:var(--text); white-space: pre-wrap; }
+    .tag-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .modal.large{ width: min(920px, calc(100vw - 24px)); }
+
+    .tag{
+      background: rgba(2,6,23,0.06);
+      border: 1px solid rgba(2,6,23,0.08);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Graduate Thesis System</h1>
+        <p>Thesis Management (THESIS)</p>
+      </div>
+
+      <nav class="nav">
+        <a href="dashboard.html">📊 Dashboard</a>
+        <a class="active" href="theses.html">📚 Theses</a>
+        <a href="people.html">👤 People</a>
+        <a href="lookups.html">🧩 Lookups</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+        </div>
+        <div class="topbar-actions">
+          <a class="btn primary" href="thesis-form.html">➕ New Thesis</a>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="card-header">
+          <h3>Advanced Search</h3>
+          <div class="card-actions">
+            <button class="btn" id="btnReset">Reset</button>
+            <button class="btn primary" id="btnSearch">Search</button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="filters-grid">
+            <div class="field col-6">
+              <label>Title contains</label>
+              <input id="fTitle" type="text" placeholder="e.g., deep learning" />
+            </div>
+
+            <div class="field col-3">
+              <label>Year (min)</label>
+              <input id="fYearMin" type="number" placeholder="e.g., 2018" />
+            </div>
+
+            <div class="field col-3">
+              <label>Year (max)</label>
+              <input id="fYearMax" type="number" placeholder="e.g., 2025" />
+            </div>
+
+            <div class="field col-4">
+              <label>University</label>
+              <select id="fUniversity"></select>
+            </div>
+
+            <div class="field col-4">
+              <label>Institute</label>
+              <select id="fInstitute"></select>
+            </div>
+
+            <div class="field col-4">
+              <label>Type</label>
+              <select id="fType"></select>
+            </div>
+
+            <div class="field col-4">
+              <label>Language</label>
+              <select id="fLanguage"></select>
+            </div>
+
+            <div class="field col-4">
+              <label>Subject</label>
+              <select id="fSubject"></select>
+            </div>
+
+            <div class="field col-4">
+              <label>Keyword contains</label>
+              <input id="fKeyword" type="text" placeholder="e.g., NLP" />
+            </div>
+
+            <div class="field col-6">
+              <label>Author contains</label>
+              <input id="fAuthor" type="text" placeholder="e.g., Ahmet" />
+            </div>
+
+            <div class="field col-6">
+              <label>Supervisor contains</label>
+              <input id="fSupervisor" type="text" placeholder="e.g., Dr. Yılmaz" />
+            </div>
+
+            <div class="col-12 inline-note">
+              Tip: You can combine any filters (author + keyword + year range, etc.).
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h3>Results</h3>
+          <span class="badge" id="resultCount">0</span>
+        </div>
+
+        <div id="apiError" class="card-footer" style="display:none; color:var(--danger);"></div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ThesisID</th>
+                <th>Title</th>
+                <th>Year</th>
+                <th>University</th>
+                <th>Institute</th>
+                <th>Type</th>
+                <th>Language</th>
+                <th style="width: 190px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="card-footer muted" id="emptyHint" style="display:none;">
+          No theses matched your filters.
+        </div>
+      </section>
+    </main>
+  </div>
+
+
+  <!-- DETAIL MODAL -->
+  <div id="detailModal" class="modal-overlay" onclick="closeIfOverlay(event, 'detailModal')">
+    <div class="modal large">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div style="min-width:0;">
+          <h3 id="dTitle" style="margin:0 0 6px 0;">Thesis Detail</h3>
+          <p id="dSub" class="muted" style="margin:0;">YÖK-style details (no file download)</p>
+        </div>
+        <button class="btn" onclick="closeModal('detailModal')" title="Close">✕</button>
+      </div>
+
+      <div style="margin-top:14px;" class="detail-grid" id="detailGrid"></div>
+
+      <div class="row" style="margin-top:16px;">
+        <button class="btn" onclick="closeModal('detailModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <script>
+    // =========================
+    // API config
+    // =========================
+    const API_BASE = "https://localhost:7189/api";
+
+    // In case backend uses HTTPS with a dev cert, open the API once in browser to trust the certificate.
+    async function apiFetch(path, options = {}) {
+      const url = `${API_BASE}${path}`;
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        }
+      });
+
+      // Try to parse JSON (even on errors)
+      const contentType = res.headers.get("content-type") || "";
+      const isJson = contentType.includes("application/json");
+      const body = isJson ? await res.json().catch(() => null) : await res.text().catch(() => "");
+
+      if (!res.ok) {
+        const msg =
+          (typeof body === "string" && body) ? body :
+          (body && body.message) ? body.message :
+          (body && body.title) ? body.title :
+          `${res.status} ${res.statusText}`;
+        throw new Error(msg);
+      }
+      return body;
+    }
+
+    function setApiError(message) {
+      const el = document.getElementById("apiError");
+      if (!el) return;
+      if (!message) {
+        el.style.display = "none";
+        el.textContent = "";
+      } else {
+        el.style.display = "block";
+        el.textContent = message;
+      }
+    }
+
+    // =========================
+    // Helpers
+    // =========================
+    function byId(id){ return document.getElementById(id); }
+
+    function escapeHtml(str){
+      return String(str ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    // Support both PascalCase and camelCase payloads
+    function pick(obj, ...keys){
+      for (const k of keys){
+        if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
+      }
+      return undefined;
+    }
+
+    function fillSelect(selectEl, items, getValue, getText, includeAll=true, allText="All"){
+      selectEl.innerHTML = "";
+      if(includeAll){
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = allText;
+        selectEl.appendChild(opt);
+      }
+      items.forEach(it => {
+        const opt = document.createElement("option");
+        opt.value = String(getValue(it));
+        opt.textContent = String(getText(it));
+        selectEl.appendChild(opt);
+      });
+    }
+
+    function openModal(id){
+      const m = byId(id);
+      m.classList.add("active");
+    }
+    function closeIfOverlay(e, id){ if(e.target && e.target.id === id){ closeModal(id); } }
+    function closeModal(id){
+      const m = byId(id);
+      m.classList.remove("active");
+    }
+
+    // =========================
+    // Data caches (from API)
+    // =========================
+    let universities = [];
+    let institutes = [];
+    let thesisTypes = [];
+    let languages = [];
+    let subjects = [];
+
+    const instituteById = new Map(); // instituteId -> {..}
+    const universityById = new Map(); // universityId -> {..}
+
+    function rebuildMaps(){
+      instituteById.clear();
+      institutes.forEach(i => {
+        const id = Number(pick(i,"instituteId","InstituteId","InstituteID"));
+        if (Number.isFinite(id)) instituteById.set(id, i);
+      });
+
+      universityById.clear();
+      universities.forEach(u => {
+        const id = Number(pick(u,"universityId","UniversityId","UniversityID"));
+        if (Number.isFinite(id)) universityById.set(id, u);
+      });
+    }
+
+    // =========================
+    // Filters UI
+    // =========================
+    async function initFilters(){
+      setApiError("");
+
+      try{
+        // Load lookups in parallel
+        const [
+          uniRes,
+          instRes,
+          typeRes,
+          langRes,
+          subjRes
+        ] = await Promise.all([
+          apiFetch("/universities"),
+          apiFetch("/institutes"),
+          apiFetch("/thesistypes"),
+          apiFetch("/languages"),
+          apiFetch("/subjects"),
+        ]);
+
+        universities = Array.isArray(uniRes) ? uniRes : [];
+        institutes    = Array.isArray(instRes) ? instRes : [];
+        thesisTypes   = Array.isArray(typeRes) ? typeRes : [];
+        languages     = Array.isArray(langRes) ? langRes : [];
+        subjects      = Array.isArray(subjRes) ? subjRes : [];
+
+        rebuildMaps();
+
+        // Fill selects
+        fillSelect(byId("fUniversity"), universities,
+          u => pick(u,"universityId","UniversityId","UniversityID"),
+          u => pick(u,"name","Name"),
+          true, "All universities");
+
+        fillSelect(byId("fInstitute"), institutes,
+          i => pick(i,"instituteId","InstituteId","InstituteID"),
+          i => pick(i,"name","Name"),
+          true, "All institutes");
+
+        fillSelect(byId("fType"), thesisTypes,
+          t => pick(t,"typeId","TypeId","TypeID"),
+          t => pick(t,"typeName","TypeName","name","Name"),
+          true, "All types");
+
+        fillSelect(byId("fLanguage"), languages,
+          l => pick(l,"languageId","LanguageId","LanguageID"),
+          l => pick(l,"name","Name"),
+          true, "All languages");
+
+        fillSelect(byId("fSubject"), subjects,
+          s => pick(s,"subjectId","SubjectId","SubjectID"),
+          s => pick(s,"name","Name"),
+          true, "All subjects");
+
+        // When university changes, filter institute dropdown
+        byId("fUniversity").addEventListener("change", () => {
+          const uniId = Number(byId("fUniversity").value || 0);
+          const instList = uniId
+            ? institutes.filter(i => Number(pick(i,"universityId","UniversityId","UniversityID","UniversityID")) === uniId)
+            : institutes;
+
+          fillSelect(byId("fInstitute"), instList,
+            i => pick(i,"instituteId","InstituteId","InstituteID"),
+            i => pick(i,"name","Name"),
+            true, "All institutes");
+        });
+
+      }catch(err){
+        setApiError(`API error while loading lookups: ${err.message}`);
+      }
+    }
+
+    function readFilters(){
+      return {
+        title: byId("fTitle").value.trim(),
+        yearMin: byId("fYearMin").value.trim(),
+        yearMax: byId("fYearMax").value.trim(),
+        uniId: byId("fUniversity").value.trim(),
+        instId: byId("fInstitute").value.trim(),
+        typeId: byId("fType").value.trim(),
+        langId: byId("fLanguage").value.trim(),
+        subjectId: byId("fSubject").value.trim(),
+        keyword: byId("fKeyword").value.trim(),
+        author: byId("fAuthor").value.trim(),
+        supervisor: byId("fSupervisor").value.trim(),
+      };
+    }
+
+    function buildQuery(paramsObj){
+      const p = new URLSearchParams();
+      Object.entries(paramsObj).forEach(([k,v]) => {
+        if (v === undefined || v === null) return;
+        const s = String(v).trim();
+        if (!s) return;
+        p.set(k, s);
+      });
+      const qs = p.toString();
+      return qs ? `?${qs}` : "";
+    }
+
+    // =========================
+    // Results table
+    // =========================
+    function getUniversityNameFromInstituteId(instituteId){
+      const inst = instituteById.get(Number(instituteId));
+      if (!inst) return "";
+      const uniName = pick(inst, "universityName", "UniversityName");
+      if (uniName) return uniName;
+
+      const uniId = pick(inst, "universityId","UniversityId","UniversityID");
+      const uni = universityById.get(Number(uniId));
+      return uni ? pick(uni,"name","Name") : "";
+    }
+
+    function getInstituteName(instituteId){
+      const inst = instituteById.get(Number(instituteId));
+      return inst ? (pick(inst,"name","Name") || "") : "";
+    }
+
+    function getTypeName(row){
+      return pick(row, "typeName", "TypeName") || "";
+    }
+
+    function getLanguageName(row){
+      return pick(row, "languageName", "LanguageName") || "";
+    }
+
+    async function fetchThesesWithBestEndpoint(filters){
+      // Prefer /api/theses/search if exists (supports more filters).
+      // If it doesn't exist, fallback to /api/theses (basic filters) + client-side filtering for year range.
+      const searchQs = buildQuery({
+        title: filters.title,
+        yearMin: filters.yearMin,
+        yearMax: filters.yearMax,
+        typeId: filters.typeId,
+        languageId: filters.langId,
+        instituteId: filters.instId,
+        subjectId: filters.subjectId,
+        keyword: filters.keyword,
+        author: filters.author,
+        supervisor: filters.supervisor,
+      });
+
+      try{
+        const res = await apiFetch(`/theses/search${searchQs}`);
+        if (Array.isArray(res)) return res;
+      }catch(err){
+        // fallback if 404 or any issue
+        // console.warn("search endpoint failed:", err);
+      }
+
+      // fallback basic
+      const basicQs = buildQuery({
+        title: filters.title,
+        // year range not supported here; if user filled min==max, pass year
+        year: (filters.yearMin && filters.yearMax && filters.yearMin === filters.yearMax) ? filters.yearMin : "",
+        typeId: filters.typeId,
+        languageId: filters.langId,
+        instituteId: filters.instId,
+      });
+
+      const list = await apiFetch(`/theses${basicQs}`);
+      const arr = Array.isArray(list) ? list : [];
+
+      // client-side year range filter
+      const yMin = Number(filters.yearMin || 0);
+      const yMax = Number(filters.yearMax || 0);
+
+      let out = arr;
+      if (yMin) out = out.filter(x => Number(pick(x,"year","Year")) >= yMin);
+      if (yMax) out = out.filter(x => Number(pick(x,"year","Year")) <= yMax);
+
+      // university filter (needs institute mapping)
+      if (filters.uniId){
+        const uId = Number(filters.uniId);
+        out = out.filter(x => {
+          const instId = Number(pick(x,"instituteId","InstituteId"));
+          const inst = instituteById.get(instId);
+          const uniId = Number(pick(inst,"universityId","UniversityId","UniversityID"));
+          return uniId === uId;
+        });
+      }
+
+      return out;
+    }
+
+    async function render(){
+      setApiError("");
+      const filters = readFilters();
+
+      try{
+        const list = await fetchThesesWithBestEndpoint(filters);
+
+        const tbody = byId("tbody");
+        tbody.innerHTML = "";
+
+        byId("resultCount").textContent = String(list.length);
+        byId("emptyHint").style.display = list.length ? "none" : "block";
+
+        list.forEach(row => {
+          const thesisId = pick(row,"thesisId","ThesisId","ThesisID");
+          const title   = pick(row,"title","Title") || "";
+          const year    = pick(row,"year","Year") ?? "";
+
+          const instId  = pick(row,"instituteId","InstituteId","InstituteID");
+          const typeId  = pick(row,"typeId","TypeId","TypeID");
+          const langId  = pick(row,"languageId","LanguageId","LanguageID");
+
+          const uniName = getUniversityNameFromInstituteId(instId);
+          const instName = pick(row,"instituteName","InstituteName") || getInstituteName(instId);
+          const typeName = getTypeName(row) || (thesisTypes.find(t => Number(pick(t,"typeId","TypeId","TypeID")) === Number(typeId)) ? pick(thesisTypes.find(t => Number(pick(t,"typeId","TypeId","TypeID")) === Number(typeId)),"typeName","TypeName","name","Name") : "");
+          const langName = getLanguageName(row) || (languages.find(l => Number(pick(l,"languageId","LanguageId","LanguageID")) === Number(langId)) ? pick(languages.find(l => Number(pick(l,"languageId","LanguageId","LanguageID")) === Number(langId)),"name","Name") : "");
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${escapeHtml(thesisId)}</td>
+            <td><a class="title-link" data-view="${escapeHtml(thesisId)}">${escapeHtml(title)}</a></td>
+            <td>${escapeHtml(year)}</td>
+            <td>${escapeHtml(uniName)}</td>
+            <td>${escapeHtml(instName)}</td>
+            <td>${escapeHtml(typeName)}</td>
+            <td>${escapeHtml(langName)}</td>
+            <td>
+              <div class="row-actions">
+                <button class="btn" data-view="${escapeHtml(thesisId)}">View</button>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // handlers
+        [...document.querySelectorAll("[data-view]")].forEach(el => {
+          el.addEventListener("click", () => openDetail(Number(el.getAttribute("data-view"))));
+        });
+
+      }catch(err){
+        setApiError(`API error while loading theses: ${err.message}`);
+      }
+    }
+
+    // =========================
+    // Detail modal (GET /api/theses/{id})
+    // =========================
+    async function openDetail(thesisId){
+      setApiError("");
+      try{
+        const d = await apiFetch(`/theses/${thesisId}`);
+
+        const title = pick(d,"title","Title") || "Thesis Detail";
+        const year  = pick(d,"year","Year") ?? "";
+        const tid   = pick(d,"thesisId","ThesisId","ThesisID") ?? thesisId;
+
+        byId("dTitle").textContent = title;
+        byId("dSub").textContent = `ThesisID: ${tid} • Year: ${year}`;
+
+        const grid = byId("detailGrid");
+        grid.innerHTML = "";
+
+        const addKv = (k,v,full=false) => {
+          const div = document.createElement("div");
+          div.className = "kv" + (full ? " full" : "");
+          div.innerHTML = `<div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v || "-")}</div>`;
+          grid.appendChild(div);
+        };
+
+        const authorObj = pick(d,"author","Author");
+        const author = authorObj ? `${pick(authorObj,"fName","FName","fname","Fname","firstName","FirstName","FName")} ${pick(authorObj,"lName","LName","lname","Lname","lastName","LastName","LName")}`.trim() : "-";
+
+        const supervisorsArr = pick(d,"supervisors","Supervisors") || [];
+        const supervisors = Array.isArray(supervisorsArr)
+          ? supervisorsArr.map(p => `${pick(p,"fName","FName","fname","Fname")} ${pick(p,"lName","LName","lname","Lname")}`.trim()).filter(Boolean)
+          : [];
+
+        const coSupObj = pick(d,"coSupervisor","CoSupervisor");
+        const coSup = coSupObj ? `${pick(coSupObj,"fName","FName","fname","Fname")} ${pick(coSupObj,"lName","LName","lname","Lname")}`.trim() : "";
+
+        const uniName = pick(d,"universityName","UniversityName") || getUniversityNameFromInstituteId(pick(d,"instituteId","InstituteId"));
+        const instName = pick(d,"instituteName","InstituteName") || getInstituteName(pick(d,"instituteId","InstituteId"));
+        const typeName = pick(d,"typeName","TypeName") || "";
+        const langName = pick(d,"languageName","LanguageName") || "";
+
+        addKv("Author", author || "-", false);
+        addKv("Supervisor(s)", supervisors.length ? supervisors.join(", ") : "-", false);
+        addKv("Co-Supervisor", coSup || "-", false);
+        addKv("University", uniName || "-", false);
+        addKv("Institute", instName || "-", false);
+        addKv("Type", typeName || "-", false);
+        addKv("Language", langName || "-", false);
+        addKv("Year", String(year || "-"), false);
+        addKv("Pages", String(pick(d,"numberOfPages","NumberOfPages") ?? "-"), false);
+
+        const sd = pick(d,"submissionDate","SubmissionDate");
+        addKv("Submission Date", sd ? String(sd).slice(0,10) : "-", false);
+
+        addKv("Abstract", pick(d,"abstract","Abstract") || "-", true);
+
+        const subjectsArr = pick(d,"subjects","Subjects") || [];
+        const keywordsArr = pick(d,"keywords","Keywords") || [];
+
+        const subjNames = Array.isArray(subjectsArr) ? subjectsArr.map(x => pick(x,"name","Name")).filter(Boolean) : [];
+        const keyNames  = Array.isArray(keywordsArr) ? keywordsArr.map(x => pick(x,"name","Name")).filter(Boolean) : [];
+
+        const tagsBlock = document.createElement("div");
+        tagsBlock.className = "kv full";
+        tagsBlock.innerHTML = `
+          <div class="k">Subjects</div>
+          <div class="v">
+            <div class="tag-row">${subjNames.length ? subjNames.map(s => `<span class="tag">${escapeHtml(s)}</span>`).join("") : "<span class='muted'>-</span>"}</div>
+          </div>
+          <div class="k" style="margin-top:12px;">Keywords</div>
+          <div class="v">
+            <div class="tag-row">${keyNames.length ? keyNames.map(s => `<span class="tag">${escapeHtml(s)}</span>`).join("") : "<span class='muted'>-</span>"}</div>
+          </div>
+        `;
+        grid.appendChild(tagsBlock);
+
+        openModal("detailModal");
+      }catch(err){
+        setApiError(`API error while loading details: ${err.message}`);
+      }
+    }
+
+    // =========================
+    // Wire buttons
+    // =========================
+    byId("btnSearch").addEventListener("click", render);
+    byId("btnReset").addEventListener("click", () => {
+      ["fTitle","fYearMin","fYearMax","fKeyword","fAuthor","fSupervisor"].forEach(id => byId(id).value = "");
+      ["fUniversity","fInstitute","fType","fLanguage","fSubject"].forEach(id => byId(id).value = "");
+
+      // reset institute list to full
+      fillSelect(byId("fInstitute"), institutes,
+        i => pick(i,"instituteId","InstituteId","InstituteID"),
+        i => pick(i,"name","Name"),
+        true, "All institutes");
+
+      render();
+    });
+
+    // instant search on Enter
+    document.addEventListener("keydown", (e) => {
+      if(e.key === "Enter"){
+        const active = document.activeElement;
+        if(active && (active.tagName === "INPUT" || active.tagName === "SELECT")){
+          e.preventDefault();
+          render();
+        }
+      }
+    });
+
+    // Init
+    (async () => {
+      await initFilters();
+      await render();
+    })();
+  </script>
+
+</body>
+</html>

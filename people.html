@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="styles.css" />
+  <title>GraduateThesisDB – People</title>
+
+  <style>
+    .req { color: var(--danger); font-weight: 900; }
+    .inline-note { color: var(--muted); font-size: 12px; margin-top: 10px; line-height: 1.4; }
+    .row-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .readonly-hint { font-size:12px; color:var(--muted); margin-top:8px; }
+    .error-text { color: var(--danger); font-size: 12px; margin-top: 6px; display:none; }
+    .error-text.show { display:block; }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Graduate Thesis System</h1>
+        <p>People Management (PERSON)</p>
+      </div>
+
+      <nav class="nav">
+        <a href="dashboard.html">📊 Dashboard</a>
+        <a href="theses.html">📚 Theses</a>
+        <a class="active" href="people.html">👤 People</a>
+        <a href="lookups.html">🧩 Lookups</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="title">
+          <h2>People</h2>
+          <p>CRUD operations for PERSON (FName, LName, Email, InstituteID).</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnNew">➕ New Person</button>
+          <button class="btn primary" id="btnRefresh">Refresh</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="filters">
+          <input class="input" id="searchInput" placeholder="Search by name or email..." />
+          <select class="select" id="instituteFilter">
+            <option value="">All Institutes</option>
+          </select>
+          <button class="btn" id="btnApply">Apply</button>
+          <button class="btn" id="btnClear">Clear</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>PersonID</th>
+                <th>FName</th>
+                <th>LName</th>
+                <th>Email</th>
+                <th>Institute</th>
+                <th style="width:260px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="peopleTbody">
+              <!-- filled by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <small class="inline-note">
+          Constraint note: <b>Email</b> must be unique (UQ_Person_Email). This UI checks duplicates before saving.
+          In real implementation, backend should also enforce this and return a friendly error.
+        </small>
+      </div>
+    </main>
+  </div>
+
+  <!-- ADD/EDIT/VIEW MODAL -->
+  <div id="personModal" class="modal-overlay" onclick="closeIfOverlay(event, 'personModal')">
+    <div class="modal">
+      <h3 id="modalTitle">New Person</h3>
+      <p id="modalDesc">Fill the form and click Save.</p>
+
+      <div class="form">
+        <div class="field">
+          <label>PersonID</label>
+          <input id="fPersonID" placeholder="Auto / Identity" disabled />
+        </div>
+
+        <div class="field">
+          <label>Institute <span class="req">*</span></label>
+          <select id="fInstitute"></select>
+          <div class="error-text" id="errInstitute">Please select an institute.</div>
+        </div>
+
+        <div class="field">
+          <label>First Name (FName) <span class="req">*</span></label>
+          <input id="fFName" placeholder="e.g., Ahmet" />
+          <div class="error-text" id="errFName">First name is required.</div>
+        </div>
+
+        <div class="field">
+          <label>Last Name (LName) <span class="req">*</span></label>
+          <input id="fLName" placeholder="e.g., Yilmaz" />
+          <div class="error-text" id="errLName">Last name is required.</div>
+        </div>
+
+        <div class="field full">
+          <label>Email <span class="req">*</span></label>
+          <input id="fEmail" type="email" placeholder="e.g., ahmet.yilmaz@example.com" />
+          <div class="error-text" id="errEmail">Please enter a valid email (and it must be unique).</div>
+          <div class="readonly-hint" id="readonlyHint" style="display:none;">
+            View mode: fields are read-only.
+          </div>
+        </div>
+
+        <div class="field full" style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="btn" id="btnCancel">Cancel</button>
+          <button class="btn primary" id="btnSave">Save</button>
+        </div>
+      </div>
+
+      <small class="inline-note">
+        DB mapping: PERSON(FName, LName, Email, InstituteID). InstituteID is a foreign key to INSTITUTE.
+      </small>
+    </div>
+  </div>
+
+  <!-- DELETE MODAL -->
+  <div id="deleteModal" class="modal-overlay" onclick="closeIfOverlay(event, 'deleteModal')">
+    <div class="modal">
+      <h3>Delete Person?</h3>
+      <p id="deleteText">
+        This action cannot be undone. If this person is referenced in THESIS_PERSON_ROLE,
+        SQL Server may block deletion due to FK constraints.
+      </p>
+      <div class="row" style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn" id="btnDeleteCancel">Cancel</button>
+        <button class="btn danger" id="btnDeleteConfirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== LOOKUP DATA (matches your INSERTs) ======
+    const institutes = [
+      { id: 1, name: "Institute of Science" },
+      { id: 2, name: "Institute of Social Sciences" },
+      { id: 3, name: "Graduate School of Science" },
+      { id: 4, name: "Graduate School of Informatics" },
+      { id: 5, name: "Institute of Engineering" },
+    ];
+
+    // ====== PEOPLE DATA (matches your INSERTs) ======
+    let people = [
+      { id: 1, fName: "Ahmet",  lName: "Yilmaz", email: "ahmet.yilmaz@example.com",  instituteId: 1 },
+      { id: 2, fName: "Ayse",   lName: "Demir",  email: "ayse.demir@example.com",   instituteId: 1 },
+      { id: 3, fName: "Mehmet", lName: "Kara",   email: "mehmet.kara@example.com",  instituteId: 2 },
+      { id: 4, fName: "Elif",   lName: "Sahin",  email: "elif.sahin@example.com",   instituteId: 3 },
+      { id: 5, fName: "Can",    lName: "Aydin",  email: "can.aydin@example.com",    instituteId: 4 },
+    ];
+
+    // ====== UI STATE ======
+    let mode = "create"; // create | edit | view
+    let editingId = null;
+    let deleteId = null;
+
+    // ====== ELEMENTS ======
+    const tbody = document.getElementById("peopleTbody");
+    const searchInput = document.getElementById("searchInput");
+    const instituteFilter = document.getElementById("instituteFilter");
+
+    const personModal = document.getElementById("personModal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalDesc = document.getElementById("modalDesc");
+
+    const fPersonID = document.getElementById("fPersonID");
+    const fInstitute = document.getElementById("fInstitute");
+    const fFName = document.getElementById("fFName");
+    const fLName = document.getElementById("fLName");
+    const fEmail = document.getElementById("fEmail");
+
+    const errInstitute = document.getElementById("errInstitute");
+    const errFName = document.getElementById("errFName");
+    const errLName = document.getElementById("errLName");
+    const errEmail = document.getElementById("errEmail");
+    const readonlyHint = document.getElementById("readonlyHint");
+
+    const btnNew = document.getElementById("btnNew");
+    const btnRefresh = document.getElementById("btnRefresh");
+    const btnApply = document.getElementById("btnApply");
+    const btnClear = document.getElementById("btnClear");
+
+    const btnCancel = document.getElementById("btnCancel");
+    const btnSave = document.getElementById("btnSave");
+
+    const deleteModal = document.getElementById("deleteModal");
+    const btnDeleteCancel = document.getElementById("btnDeleteCancel");
+    const btnDeleteConfirm = document.getElementById("btnDeleteConfirm");
+
+    // ====== INIT ======
+    function init() {
+      // Fill institute filter + form dropdown
+      fillInstituteSelect(instituteFilter, true);
+      fillInstituteSelect(fInstitute, false);
+
+      renderTable();
+
+      // events
+      btnNew.addEventListener("click", openCreate);
+      btnRefresh.addEventListener("click", renderTable);
+
+      btnApply.addEventListener("click", renderTable);
+      btnClear.addEventListener("click", () => {
+        searchInput.value = "";
+        instituteFilter.value = "";
+        renderTable();
+      });
+
+      btnCancel.addEventListener("click", closePersonModal);
+      btnSave.addEventListener("click", handleSave);
+
+      btnDeleteCancel.addEventListener("click", closeDeleteModal);
+      btnDeleteConfirm.addEventListener("click", confirmDelete);
+    }
+
+    function fillInstituteSelect(selectEl, includeAllOption) {
+      selectEl.innerHTML = "";
+      if (includeAllOption) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "All Institutes";
+        selectEl.appendChild(opt);
+      } else {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "Select Institute...";
+        selectEl.appendChild(opt);
+      }
+
+      institutes.forEach(ins => {
+        const opt = document.createElement("option");
+        opt.value = String(ins.id);
+        opt.textContent = `${ins.name}`;
+        selectEl.appendChild(opt);
+      });
+    }
+
+    // ====== RENDER ======
+    function getInstituteName(id) {
+      const ins = institutes.find(x => x.id === id);
+      return ins ? ins.name : "-";
+    }
+
+    function renderTable() {
+      const q = (searchInput.value || "").trim().toLowerCase();
+      const insFilter = instituteFilter.value ? Number(instituteFilter.value) : null;
+
+      const filtered = people.filter(p => {
+        const matchesSearch =
+          !q ||
+          p.fName.toLowerCase().includes(q) ||
+          p.lName.toLowerCase().includes(q) ||
+          p.email.toLowerCase().includes(q);
+
+        const matchesInstitute = !insFilter || p.instituteId === insFilter;
+        return matchesSearch && matchesInstitute;
+      });
+
+      tbody.innerHTML = "";
+
+      if (filtered.length === 0) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td colspan="6" style="color:var(--muted); padding:14px;">
+            No records found.
+          </td>
+        `;
+        tbody.appendChild(tr);
+        return;
+      }
+
+      filtered.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${escapeHtml(p.fName)}</td>
+          <td>${escapeHtml(p.lName)}</td>
+          <td>${escapeHtml(p.email)}</td>
+          <td>${escapeHtml(getInstituteName(p.instituteId))}</td>
+          <td>
+            <div class="row-actions">
+              <button class="btn" data-action="view" data-id="${p.id}">View</button>
+              <button class="btn" data-action="edit" data-id="${p.id}">Edit</button>
+              <button class="btn danger" data-action="delete" data-id="${p.id}">Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // attach row button events (event delegation)
+      tbody.querySelectorAll("button[data-action]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const action = btn.getAttribute("data-action");
+          const id = Number(btn.getAttribute("data-id"));
+          if (action === "view") openView(id);
+          if (action === "edit") openEdit(id);
+          if (action === "delete") openDelete(id);
+        });
+      });
+    }
+
+    // ====== MODAL OPEN/CLOSE ======
+    function openCreate() {
+      mode = "create";
+      editingId = null;
+
+      modalTitle.textContent = "New Person";
+      modalDesc.textContent = "Fill the form and click Save.";
+      readonlyHint.style.display = "none";
+
+      resetErrors();
+      setReadonly(false);
+
+      fPersonID.value = "Auto / Identity";
+      fInstitute.value = "";
+      fFName.value = "";
+      fLName.value = "";
+      fEmail.value = "";
+
+      btnSave.style.display = "inline-block";
+      btnSave.textContent = "Save";
+
+      openModal(personModal);
+    }
+
+    function openEdit(id) {
+      const p = people.find(x => x.id === id);
+      if (!p) return;
+
+      mode = "edit";
+      editingId = id;
+
+      modalTitle.textContent = "Edit Person";
+      modalDesc.textContent = "Update fields and click Save.";
+      readonlyHint.style.display = "none";
+
+      resetErrors();
+      setReadonly(false);
+
+      fPersonID.value = String(p.id);
+      fInstitute.value = String(p.instituteId);
+      fFName.value = p.fName;
+      fLName.value = p.lName;
+      fEmail.value = p.email;
+
+      btnSave.style.display = "inline-block";
+      btnSave.textContent = "Save Changes";
+
+      openModal(personModal);
+    }
+
+    function openView(id) {
+      const p = people.find(x => x.id === id);
+      if (!p) return;
+
+      mode = "view";
+      editingId = id;
+
+      modalTitle.textContent = "View Person";
+      modalDesc.textContent = "Read-only view.";
+      readonlyHint.style.display = "block";
+
+      resetErrors();
+      setReadonly(true);
+
+      fPersonID.value = String(p.id);
+      fInstitute.value = String(p.instituteId);
+      fFName.value = p.fName;
+      fLName.value = p.lName;
+      fEmail.value = p.email;
+
+      btnSave.style.display = "none";
+
+      openModal(personModal);
+    }
+
+    function closePersonModal() {
+      closeModal(personModal);
+    }
+
+    function openDelete(id) {
+      deleteId = id;
+      openModal(deleteModal);
+    }
+
+    function closeDeleteModal() {
+      deleteId = null;
+      closeModal(deleteModal);
+    }
+
+    function closeIfOverlay(e, modalId) {
+      if (e.target && e.target.id === modalId) {
+        if (modalId === "personModal") closePersonModal();
+        if (modalId === "deleteModal") closeDeleteModal();
+      }
+    }
+
+    function openModal(el) {
+      el.classList.add("active");
+    }
+
+    function closeModal(el) {
+      el.classList.remove("active");
+    }
+
+    function setReadonly(isReadonly) {
+      fInstitute.disabled = isReadonly;
+      fFName.disabled = isReadonly;
+      fLName.disabled = isReadonly;
+      fEmail.disabled = isReadonly;
+    }
+
+    // ====== SAVE / VALIDATION ======
+    function resetErrors() {
+      errInstitute.classList.remove("show");
+      errFName.classList.remove("show");
+      errLName.classList.remove("show");
+      errEmail.classList.remove("show");
+    }
+
+    function validateForm() {
+      resetErrors();
+
+      const instituteId = fInstitute.value ? Number(fInstitute.value) : null;
+      const fName = (fFName.value || "").trim();
+      const lName = (fLName.value || "").trim();
+      const email = (fEmail.value || "").trim();
+
+      let ok = true;
+
+      if (!instituteId) { errInstitute.classList.add("show"); ok = false; }
+      if (!fName) { errFName.classList.add("show"); ok = false; }
+      if (!lName) { errLName.classList.add("show"); ok = false; }
+
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!emailOk) { errEmail.classList.add("show"); ok = false; }
+
+      // UNIQUE email check (case-insensitive)
+      const emailLower = email.toLowerCase();
+      const duplicate = people.some(p =>
+        p.email.toLowerCase() === emailLower &&
+        (mode !== "edit" || p.id !== editingId)
+      );
+      if (duplicate) { errEmail.classList.add("show"); ok = false; }
+
+      return ok;
+    }
+
+    function handleSave() {
+      if (mode === "view") return;
+      if (!validateForm()) return;
+
+      const instituteId = Number(fInstitute.value);
+      const fName = fFName.value.trim();
+      const lName = fLName.value.trim();
+      const email = fEmail.value.trim();
+
+      if (mode === "create") {
+        const newId = nextPersonId();
+        people.push({ id: newId, fName, lName, email, instituteId });
+      } else if (mode === "edit") {
+        const idx = people.findIndex(x => x.id === editingId);
+        if (idx !== -1) {
+          people[idx] = { id: editingId, fName, lName, email, instituteId };
+        }
+      }
+
+      closePersonModal();
+      renderTable();
+    }
+
+    function nextPersonId() {
+      return people.length ? Math.max(...people.map(p => p.id)) + 1 : 1;
+    }
+
+    // ====== DELETE ======
+    function confirmDelete() {
+      if (deleteId == null) return;
+
+      // In real DB, FK constraint might prevent delete if referenced by THESIS_PERSON_ROLE.
+      // Here we allow delete in UI demo.
+      people = people.filter(p => p.id !== deleteId);
+
+      closeDeleteModal();
+      renderTable();
+    }
+
+    // ====== UTIL ======
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    // start
+    init();
+  </script>
+</body>
+</html>

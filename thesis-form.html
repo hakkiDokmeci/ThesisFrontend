@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="styles.css" />
+  <title>GraduateThesisDB – Thesis Submission</title>
+  <style>
+    .req { color: var(--danger); font-weight: 900; }
+    .form-control.multi{ height: 140px; padding-top: 10px; padding-bottom: 10px; }
+    @media(max-width:900px){ .form-control.multi{ height: 170px; } }
+
+    .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+    .grid-3{ display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; }
+    @media (max-width: 900px){
+      .grid-2,.grid-3{ grid-template-columns: 1fr; }
+    }
+
+    .section-title{ margin: 0 0 10px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .pill{
+      background: rgba(2,6,23,0.06);
+      border: 1px solid rgba(2,6,23,0.08);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .pill button{
+      border:none;
+      background:transparent;
+      cursor:pointer;
+      font-weight:900;
+      color: var(--muted);
+    }
+
+    .checklist{
+      border:1px solid rgba(2,6,23,0.08);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(2,6,23,0.03);
+      max-height: 210px;
+      overflow:auto;
+    }
+    .check-item{ display:flex; align-items:center; gap:10px; padding:6px 0; }
+    .hint{ font-size:12px; color:var(--muted); margin-top:6px; }
+    .err{ color: var(--danger); font-size: 12px; margin-top:6px; display:none; }
+    .err.show{ display:block; }
+  
+    /* Custom Multi-Select (no checkboxes) */
+    .ms{ position:relative; }
+    .ms-control{
+      width:100%;
+      height:44px;
+      border:1px solid rgba(15,23,42,0.12);
+      border-radius:12px;
+      background:#fff;
+      padding:10px 12px;
+      text-align:left;
+      font-size:14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      cursor:pointer;
+    }
+    .ms-control:after{
+      content:"▾";
+      color: rgba(15,23,42,0.55);
+      font-size: 12px;
+    }
+    .ms.open .ms-control{ outline: 2px solid rgba(99,102,241,0.25); border-color: rgba(99,102,241,0.35); }
+    .ms-menu{
+      position:absolute;
+      z-index:20;
+      left:0; right:0;
+      margin-top:6px;
+      background:#fff;
+      border:1px solid rgba(15,23,42,0.12);
+      border-radius:12px;
+      box-shadow: 0 10px 24px rgba(2,6,23,0.12);
+      max-height: 220px;
+      overflow:auto;
+      display:none;
+      padding:6px;
+    }
+    .ms.open .ms-menu{ display:block; }
+    .ms-item{
+      padding:10px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      user-select:none;
+    }
+    .ms-item:hover{ background: rgba(99,102,241,0.08); }
+    .ms-item.selected{ background: rgba(99,102,241,0.14); }
+    .ms-pills{
+      margin-top:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .pill{
+      background: rgba(99,102,241,0.12);
+      border:1px solid rgba(99,102,241,0.25);
+      color:#111827;
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+    }
+    .pill button{
+      border:none;
+      background:transparent;
+      cursor:pointer;
+      color: rgba(15,23,42,0.55);
+      font-size: 14px;
+      line-height: 1;
+      padding:0;
+    }
+</style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Graduate Thesis System</h1>
+        <p>Thesis Submission (No PDF)</p>
+      </div>
+
+      <nav class="nav">
+        <a href="dashboard.html">📊 Dashboard</a>
+        <a href="theses.html">📚 Theses</a>
+        <a href="people.html">👤 People</a>
+        <a href="lookups.html">🧩 Lookups</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2>Create Thesis</h2>
+          <p class="muted">Add thesis metadata + relationships (author, supervisors, subjects, keywords).</p>
+        </div>
+        <div class="topbar-actions">
+          <a class="btn" href="theses.html">← Back</a>
+          <button class="btn primary" id="btnSaveTop">Save Thesis</button>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="card-body">
+          <h4 class="section-title">Core Thesis Fields</h4>
+
+          <div class="grid-2">
+            <div class="field">
+              <label>Title <span class="req">*</span></label>
+              <input id="title" type="text" placeholder="Thesis title" />
+              <div class="err" id="eTitle">Title is required.</div>
+            </div>
+
+            <div class="field">
+              <label>Year <span class="req">*</span></label>
+              <input id="year" type="number" placeholder="e.g., 2025" />
+              <div class="err" id="eYear">Year must be between 1900 and 2100.</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Abstract <span class="req">*</span></label>
+            <textarea id="abstract" rows="4" placeholder="Short abstract"></textarea>
+            <div class="err" id="eAbstract">Abstract is required.</div>
+          </div>
+
+          <div class="grid-3">
+            <div class="field">
+              <label>University</label>
+              <select id="university"></select>
+              <div class="hint">Used to filter institutes.</div>
+            </div>
+
+            <div class="field">
+              <label>Institute <span class="req">*</span></label>
+              <select id="institute"></select>
+              <div class="err" id="eInstitute">Institute is required.</div>
+            </div>
+
+            <div class="field">
+              <label>Type <span class="req">*</span></label>
+              <select id="type"></select>
+              <div class="err" id="eType">Type is required.</div>
+            </div>
+
+            <div class="field">
+              <label>Language <span class="req">*</span></label>
+              <select id="language"></select>
+              <div class="err" id="eLanguage">Language is required.</div>
+            </div>
+
+            <div class="field">
+              <label>Pages <span class="req">*</span></label>
+              <input id="pages" type="number" placeholder="e.g., 120" />
+              <div class="err" id="ePages">Pages must be a positive number.</div>
+            </div>
+
+            <div class="field">
+              <label>Submission Date <span class="req">*</span></label>
+              <input id="submissionDate" type="date" />
+              <div class="err" id="eDate">Submission date is required.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-body">
+          <h4 class="section-title">People & Roles</h4>
+
+          <div class="grid-2">
+            <div class="field">
+              <label>Author (exactly 1) <span class="req">*</span></label>
+              <select id="author"></select>
+              <div class="err" id="eAuthor">Author is required.</div>
+            </div>
+
+            <div class="field">
+              <label>Supervisors (at least 1) <span class="req">*</span></label>
+              <div class="ms" id="msSupervisors">
+  <button type="button" class="ms-control" aria-haspopup="listbox" aria-expanded="false">Select supervisors</button>
+  <div class="ms-menu" role="listbox" aria-multiselectable="true"></div>
+  <div class="ms-pills" aria-label="Selected supervisors"></div>
+</div>
+<div class="err" id="eSupervisor">Select at least one supervisor.</div>
+</div>
+          </div>
+
+          <div class="field">
+            <label>Co-Supervisor (optional)</label>
+            <select id="coSupervisor"></select>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-body">
+          <h4 class="section-title">Subjects (at least 1)</h4>
+          <div class="ms" id="msSubjects">
+  <button type="button" class="ms-control" aria-haspopup="listbox" aria-expanded="false">Select subjects</button>
+  <div class="ms-menu" role="listbox" aria-multiselectable="true"></div>
+  <div class="ms-pills" aria-label="Selected subjects"></div>
+</div>
+<div class="err" id="eSubject">Select at least one subject.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-body">
+          <h4 class="section-title">Keywords (0+)</h4>
+          <div class="grid-2">
+            <div class="field">
+              <label>Add keyword</label>
+              <div style="display:flex; gap:10px;">
+                <input id="kwInput" type="text" placeholder="Type keyword and click Add" />
+                <button class="btn" id="btnAddKw" type="button">Add</button>
+              </div>
+              <div class="hint">If the keyword does not exist in Lookups, it will be created automatically.</div>
+            </div>
+
+            <div class="field">
+              <label>Selected keywords</label>
+              <div class="pill-row" id="kwPills"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-footer" style="display:flex; justify-content:flex-end; gap:10px;">
+          <a class="btn" href="theses.html">Cancel</a>
+          <button class="btn primary" id="btnSaveBottom">Save Thesis</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "gt_db_v1";
+
+    function loadDb(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }
+    function saveDb(db){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    }
+    function ensureDb(){
+      let db = loadDb();
+      if(db) return db;
+
+      // If theses page hasn't initialized yet, create same base dataset here.
+      const universities = [
+        { UniversityID: 1, Name: "Istanbul University" },
+        { UniversityID: 2, Name: "Ankara University" },
+        { UniversityID: 3, Name: "Ege University" },
+      ];
+      const institutes = [
+        { InstituteID: 1, UniversityID: 1, Name: "Institute of Science" },
+        { InstituteID: 2, UniversityID: 1, Name: "Institute of Social Sciences" },
+        { InstituteID: 3, UniversityID: 2, Name: "Graduate School of Informatics" },
+        { InstituteID: 4, UniversityID: 3, Name: "Institute of Health Sciences" },
+      ];
+      const thesisTypes = [
+        { TypeID: 1, Name: "Master" },
+        { TypeID: 2, Name: "PhD" },
+      ];
+      const languages = [
+        { LanguageID: 1, Name: "Turkish" },
+        { LanguageID: 2, Name: "English" },
+      ];
+      const subjects = [
+        { SubjectID: 1, Name: "Computer Science" },
+        { SubjectID: 2, Name: "Artificial Intelligence" },
+        { SubjectID: 3, Name: "Data Mining" },
+        { SubjectID: 4, Name: "Software Engineering" },
+      ];
+      const keywords = [
+        { KeywordID: 1, Name: "Deep Learning" },
+        { KeywordID: 2, Name: "CNN" },
+        { KeywordID: 3, Name: "NLP" },
+        { KeywordID: 4, Name: "Big Data" },
+      ];
+      const people = [
+        { PersonID: 1, FirstName: "Ahmet", LastName: "Yilmaz", Email: "ahmet.yilmaz@example.com", InstituteID: 1 },
+        { PersonID: 2, FirstName: "Ayse", LastName: "Demir", Email: "ayse.demir@example.com", InstituteID: 1 },
+        { PersonID: 3, FirstName: "Mehmet", LastName: "Kara", Email: "mehmet.kara@example.com", InstituteID: 2 },
+        { PersonID: 4, FirstName: "Elif", LastName: "Sahin", Email: "elif.sahin@example.com", InstituteID: 3 },
+        { PersonID: 5, FirstName: "Can", LastName: "Aydin", Email: "can.aydin@example.com", InstituteID: 4 },
+      ];
+      const theses = [];
+      const thesisPeopleRoles = [];
+      const thesisSubjects = [];
+      const thesisKeywords = [];
+      db = { universities, institutes, thesisTypes, languages, subjects, keywords, people, theses, thesisPeopleRoles, thesisSubjects, thesisKeywords };
+      saveDb(db);
+      return db;
+    }
+
+    let db = ensureDb();
+
+    function byId(id){ return document.getElementById(id); }
+    function fullName(p){ return `${p.FirstName} ${p.LastName}`.trim(); }
+
+    
+function fillSelect(selectEl, items, getValue, getText, includePlaceholder=true, placeholder="Select..."){
+  if(!selectEl) return;
+  selectEl.innerHTML = "";
+  if(includePlaceholder){
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = placeholder;
+    selectEl.appendChild(opt);
+  }
+  items.forEach(it => {
+    const opt = document.createElement("option");
+    opt.value = String(getValue(it));
+    opt.textContent = String(getText(it));
+    selectEl.appendChild(opt);
+  });
+}
+
+function fillMultiSelect(selectEl, items, getValue, getLabel){
+  if(!selectEl) return;
+  selectEl.innerHTML = "";
+  items.forEach(it => {
+    const opt = document.createElement("option");
+    opt.value = String(getValue(it));
+    opt.textContent = String(getLabel(it));
+    selectEl.appendChild(opt);
+  });
+}
+
+
+// ---------- Custom Multi-Select widgets (no checkboxes) ----------
+const msState = {
+  msSupervisors: new Set(),
+  msSubjects: new Set()
+};
+
+function initMultiSelect(widgetId, items, getId, getLabel, placeholder){
+  const root = byId(widgetId);
+  if(!root) return;
+  const control = root.querySelector(".ms-control");
+  const menu = root.querySelector(".ms-menu");
+  const pills = root.querySelector(".ms-pills");
+
+  function render(){
+    // menu
+    menu.innerHTML = "";
+    items.forEach(it => {
+      const id = Number(getId(it));
+      const label = String(getLabel(it));
+      const item = document.createElement("div");
+      item.className = "ms-item" + (msState[widgetId].has(id) ? " selected" : "");
+      item.dataset.id = String(id);
+      item.textContent = label;
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggle(id);
+      });
+      menu.appendChild(item);
+    });
+
+    // control text
+    const count = msState[widgetId].size;
+    control.childNodes.forEach(n => { if(n.nodeType === Node.TEXT_NODE) n.textContent = ""; });
+    control.textContent = count ? `Selected (${count})` : placeholder;
+
+    // pills
+    pills.innerHTML = "";
+    const selectedIds = Array.from(msState[widgetId]);
+    selectedIds.forEach(id => {
+      const it = items.find(x => Number(getId(x)) === id);
+      const label = it ? String(getLabel(it)) : String(id);
+      const pill = document.createElement("span");
+      pill.className = "pill";
+      pill.innerHTML = `${label} <button type="button" aria-label="Remove">×</button>`;
+      pill.querySelector("button").addEventListener("click", (e) => {
+        e.stopPropagation();
+        msState[widgetId].delete(id);
+        render();
+      });
+      pills.appendChild(pill);
+    });
+  }
+
+  function toggle(id){
+    if(msState[widgetId].has(id)) msState[widgetId].delete(id);
+    else msState[widgetId].add(id);
+    render();
+  }
+
+  control.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const open = root.classList.toggle("open");
+    control.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
+  // close when clicking outside
+  document.addEventListener("click", (e) => {
+    if(!root.classList.contains("open")) return;
+    if(root.contains(e.target)) return;
+    root.classList.remove("open");
+    control.setAttribute("aria-expanded","false");
+  });
+
+  // initial render
+  render();
+}
+
+function getMsSelectedNumbers(widgetId){
+  return Array.from(msState[widgetId] || [])
+    .map(n => Number(n))
+    .filter(n => Number.isFinite(n) && n > 0);
+}
+
+
+function getSelectedNumbers(selectId){
+  const sel = byId(selectId);
+  if(!sel) return [];
+  return Array.from(sel.selectedOptions)
+    .map(o => Number(o.value))
+    .filter(n => Number.isFinite(n) && n > 0);
+}
+
+// ---------- Keywords UI ----------
+    const selectedKeywords = []; // store names
+    function renderKeywordPills(){
+      const wrap = byId("kwPills");
+      wrap.innerHTML = "";
+      selectedKeywords.forEach((name, idx) => {
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        pill.innerHTML = `<span>${escapeHtml(name)}</span><button type="button" aria-label="remove">✕</button>`;
+        pill.querySelector("button").addEventListener("click", () => {
+          selectedKeywords.splice(idx, 1);
+          renderKeywordPills();
+        });
+        wrap.appendChild(pill);
+      });
+    }
+
+    function escapeHtml(str){
+      return String(str ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+    // ---------- Selections ----------
+
+    function init(){
+      // University + institute dependency
+      fillSelect(byId("university"), db.universities, u => u.UniversityID, u => u.Name, true, "All universities");
+      fillSelect(byId("institute"), db.institutes, i => i.InstituteID, i => i.Name, true, "Select institute");
+
+      byId("university").addEventListener("change", () => {
+        const uniId = Number(byId("university").value || 0);
+        const instList = uniId ? db.institutes.filter(i => i.UniversityID === uniId) : db.institutes;
+        fillSelect(byId("institute"), instList, i => i.InstituteID, i => i.Name, true, "Select institute");
+      });
+
+      fillSelect(byId("type"), db.thesisTypes, t => t.TypeID, t => t.Name, true, "Select type");
+      fillSelect(byId("language"), db.languages, l => l.LanguageID, l => l.Name, true, "Select language");
+
+      // People
+      fillSelect(byId("author"), db.people, p => p.PersonID, p => fullName(p), true, "Select author");
+      fillSelect(byId("coSupervisor"), db.people, p => p.PersonID, p => fullName(p), true, "None");
+
+      initMultiSelect("msSupervisors", db.people, p => p.PersonID, p => fullName(p), "Select supervisors");
+      initMultiSelect("msSubjects", db.subjects, s => s.SubjectID, s => s.Name, "Select subjects");
+// Default submission date to today
+      const today = new Date().toISOString().slice(0,10);
+      byId("submissionDate").value = today;
+
+      // Keyword add
+      byId("btnAddKw").addEventListener("click", () => {
+        const val = byId("kwInput").value.trim();
+        if(!val) return;
+        if(!selectedKeywords.some(x => x.toLowerCase() === val.toLowerCase())){
+          selectedKeywords.push(val);
+          renderKeywordPills();
+        }
+        byId("kwInput").value = "";
+        byId("kwInput").focus();
+      });
+
+      // Save buttons
+      byId("btnSaveTop").addEventListener("click", saveThesis);
+      byId("btnSaveBottom").addEventListener("click", saveThesis);
+
+      // Enter = add keyword when focus on kwInput
+      byId("kwInput").addEventListener("keydown", (e) => {
+        if(e.key === "Enter"){
+          e.preventDefault();
+          byId("btnAddKw").click();
+        }
+      });
+    }
+
+    function showErr(id, show){
+      const el = byId(id);
+      if(!el) return;
+      el.classList.toggle("show", !!show);
+    }
+
+    function validate(){
+      const title = byId("title").value.trim();
+      const abs = byId("abstract").value.trim();
+      const year = Number(byId("year").value || 0);
+      const instId = Number(byId("institute").value || 0);
+      const typeId = Number(byId("type").value || 0);
+      const langId = Number(byId("language").value || 0);
+      const pages = Number(byId("pages").value || 0);
+      const date = byId("submissionDate").value;
+      const authorId = Number(byId("author").value || 0);
+
+      const okTitle = !!title;
+      const okAbs = !!abs;
+      const okYear = year >= 1900 && year <= 2100;
+      const okInst = !!instId;
+      const okType = !!typeId;
+      const okLang = !!langId;
+      const okPages = pages > 0;
+      const okDate = !!date;
+      const okAuthor = !!authorId;
+      const okSup = getMsSelectedNumbers("msSupervisors").length >= 1;
+      const okSub = getMsSelectedNumbers("msSubjects").length >= 1;
+
+      showErr("eTitle", !okTitle);
+      showErr("eAbstract", !okAbs);
+      showErr("eYear", !okYear);
+      showErr("eInstitute", !okInst);
+      showErr("eType", !okType);
+      showErr("eLanguage", !okLang);
+      showErr("ePages", !okPages);
+      showErr("eDate", !okDate);
+      showErr("eAuthor", !okAuthor);
+      showErr("eSupervisor", !okSup);
+      showErr("eSubject", !okSub);
+
+      return okTitle && okAbs && okYear && okInst && okType && okLang && okPages && okDate && okAuthor && okSup && okSub;
+    }
+
+    function nextId(list, key){
+      const max = list.reduce((m, x) => Math.max(m, Number(x[key]) || 0), 0);
+      return max + 1;
+    }
+
+    function normalizeKeywordName(s){
+      return s.trim().replace(/\s+/g, " ");
+    }
+
+    function saveThesis(){
+      db = ensureDb(); // reload
+      if(!validate()) return;
+
+      const thesisId = nextId(db.theses, "ThesisID") || 1000001;
+
+      const title = byId("title").value.trim();
+      const abs = byId("abstract").value.trim();
+      const year = Number(byId("year").value || 0);
+      const instId = Number(byId("institute").value || 0);
+      const typeId = Number(byId("type").value || 0);
+      const langId = Number(byId("language").value || 0);
+      const pages = Number(byId("pages").value || 0);
+      const date = byId("submissionDate").value;
+      const authorId = Number(byId("author").value || 0);
+      const coSupId = Number(byId("coSupervisor").value || 0);
+
+      // Insert thesis
+      db.theses.push({
+        ThesisID: thesisId,
+        Title: title,
+        Abstract: abs,
+        Year: year,
+        TypeID: typeId,
+        InstituteID: instId,
+        NumberOfPages: pages,
+        LanguageID: langId,
+        SubmissionDate: date
+      });
+
+      // Roles
+      const supervisorIds = getMsSelectedNumbers("msSupervisors");
+      const subjectIds = getMsSelectedNumbers("msSubjects");
+      db.thesisPeopleRoles.push({ ThesisID: thesisId, PersonID: authorId, Role: "AUTHOR" });
+      supervisorIds.forEach(pid => db.thesisPeopleRoles.push({ ThesisID: thesisId, PersonID: pid, Role: "SUPERVISOR" }));
+      if(coSupId){
+        db.thesisPeopleRoles.push({ ThesisID: thesisId, PersonID: coSupId, Role: "CO_SUPERVISOR" });
+      }
+
+      // Subjects
+      subjectIds.forEach(sid => db.thesisSubjects.push({ ThesisID: thesisId, SubjectID: sid }));
+
+      // Keywords (create if missing)
+      selectedKeywords.forEach(rawName => {
+        const name = normalizeKeywordName(rawName);
+        let kw = db.keywords.find(k => k.Name.toLowerCase() === name.toLowerCase());
+        if(!kw){
+          const newId = nextId(db.keywords, "KeywordID");
+          kw = { KeywordID: newId, Name: name };
+          db.keywords.push(kw);
+        }
+        db.thesisKeywords.push({ ThesisID: thesisId, KeywordID: kw.KeywordID });
+      });
+
+      saveDb(db);
+
+      // Go back
+      window.location.href = "theses.html";
+    }
+
+    init();
+    renderKeywordPills();
+  </script>
+
+
+
+
+
+<script>
+const API_BASE = "https://localhost:7189/api";
+
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const universities = await fetchAny([`${API_BASE}/universities`]);
+    const institutes   = await fetchAny([`${API_BASE}/institutes`]);
+    const types        = await fetchAny([`${API_BASE}/thesistypes`, `${API_BASE}/thesisTypes`]);
+    const languages    = await fetchAny([`${API_BASE}/languages`]);
+    const people       = await fetchAny([`${API_BASE}/people`]);
+    const subjects     = await fetchAny([`${API_BASE}/subjects`]);
+
+    fillSelectById("university", universities, pickKey(["universityId","UniversityId"]), pickKey(["name","Name"]), true);
+    fillSelectById("institute", institutes, pickKey(["instituteId","InstituteId"]), pickKey(["name","Name"]), true);
+    fillSelectById("type", types, pickKey(["typeId","TypeId"]), pickKey(["typeName","TypeName"]), true);
+    fillSelectById("language", languages, pickKey(["languageId","LanguageId"]), pickKey(["name","Name"]), true);
+
+    const personLabel = (p) => {
+      const fn = pick(p,["fname","Fname","FName","fName","firstName","FirstName"]) ?? "";
+      const ln = pick(p,["lname","Lname","LName","lName","lastName","LastName"]) ?? "";
+      const full = `${fn} ${ln}`.trim();
+      return full || pick(p,["email","Email"]) || `Person ${pick(p,["personId","PersonId"])}`;
+    };
+
+    fillSelectById("author", people, pickKey(["personId","PersonId"]), personLabel, true);
+    fillSelectById("coSupervisor", people, pickKey(["personId","PersonId"]), personLabel, true);
+
+    // FORCE-build widgets (do not depend on previous dummy init)
+    buildMultiWidget("msSupervisors", people,
+      p => Number(pick(p,["personId","PersonId"])),
+      personLabel,
+      "Select supervisors"
+    );
+
+    buildMultiWidget("msSubjects", subjects,
+      s => Number(pick(s,["subjectId","SubjectId"])),
+      s => pick(s,["name","Name"]) || `Subject ${pick(s,["subjectId","SubjectId"])}`,
+      "Select subjects"
+    );
+
+    wireUniversityInstitute(institutes);
+
+  } catch (err) {
+    alert("API error while loading thesis form lookups: " + (err?.message || err));
+    console.error(err);
+  }
+});
+
+// ---------- helpers ----------
+function buildMultiWidget(widgetId, items, getId, getLabel, placeholder){
+  const root = document.getElementById(widgetId);
+  if(!root) return;
+
+  const control = root.querySelector(".ms-control");
+  const menu = root.querySelector(".ms-menu");
+  const pills = root.querySelector(".ms-pills");
+  if(!control || !menu || !pills) return;
+
+  // state
+  if(!window.msState) window.msState = {};
+  if(!window.msState[widgetId]) window.msState[widgetId] = new Set();
+  const state = window.msState[widgetId];
+
+  const normItems = (items || []).map(it => ({
+    id: Number(getId(it)),
+    label: String(getLabel(it) ?? "")
+  })).filter(x => !Number.isNaN(x.id) && x.label.length > 0);
+
+  function render(){
+    // menu
+    menu.innerHTML = "";
+    normItems.forEach(it => {
+      const div = document.createElement("div");
+      div.className = "ms-item" + (state.has(it.id) ? " selected" : "");
+      div.dataset.id = String(it.id);
+      div.textContent = it.label;
+      div.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if(state.has(it.id)) state.delete(it.id); else state.add(it.id);
+        render();
+      });
+      menu.appendChild(div);
+    });
+
+    // pills
+    pills.innerHTML = "";
+    Array.from(state).forEach(id => {
+      const found = normItems.find(x => x.id === id);
+      const pill = document.createElement("span");
+      pill.className = "pill";
+      pill.textContent = found ? found.label : String(id);
+      pill.title = "Click to remove";
+      pill.addEventListener("click", (e) => {
+        e.stopPropagation();
+        state.delete(id);
+        render();
+      });
+      pills.appendChild(pill);
+    });
+
+    // control text
+    control.textContent = state.size ? `${state.size} selected` : placeholder;
+
+    // also sync hidden inputs if they exist (e.g., eSupervisor / eSubject)
+    const hiddenId = widgetId === "msSupervisors" ? "eSupervisor" : (widgetId === "msSubjects" ? "eSubject" : null);
+    if(hiddenId){
+      const hid = document.getElementById(hiddenId);
+      if(hid) hid.value = Array.from(state).join(",");
+    }
+  }
+
+  // open/close
+  control.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const open = root.classList.toggle("open");
+    control.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
+  document.addEventListener("click", () => {
+    root.classList.remove("open");
+    control.setAttribute("aria-expanded", "false");
+  });
+
+  render();
+}
+
+function pick(obj, keys){
+  for (const k of keys) if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
+  return null;
+}
+function pickKey(keys){
+  return (obj) => pick(obj, keys);
+}
+async function fetchAny(urls){
+  let lastErr = null;
+  for (const url of urls){
+    try{
+      const r = await fetch(url);
+      if(!r.ok) throw new Error(`${url} -> ${r.status}`);
+      const data = await r.json();
+      if(Array.isArray(data)) return data;
+      if(data && Array.isArray(data.items)) return data.items;
+      return [];
+    } catch(e){
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error("Fetch failed");
+}
+function wireUniversityInstitute(institutes) {
+  const uni = document.getElementById("university");
+  const inst = document.getElementById("institute");
+  if (!uni || !inst) return;
+
+  uni.addEventListener("change", () => {
+    const uid = Number(uni.value);
+    if (!uid) {
+      fillSelectById("institute", institutes, pickKey(["instituteId","InstituteId"]), pickKey(["name","Name"]), true);
+      return;
+    }
+    const filtered = institutes.filter(i => Number(pick(i,["universityId","UniversityId"])) === uid);
+    fillSelectById("institute", filtered, pickKey(["instituteId","InstituteId"]), pickKey(["name","Name"]), true);
+  });
+}
+function fillSelectById(id, items, valueFn, textFn, placeholder=false) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+
+  sel.innerHTML = "";
+  if (placeholder) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "Select...";
+    sel.appendChild(opt);
+  }
+
+  for (const it of (items || [])) {
+    const opt = document.createElement("option");
+    const v = valueFn(it);
+    opt.value = (v === null || v === undefined) ? "" : String(v);
+    opt.textContent = String(textFn(it) ?? "");
+    sel.appendChild(opt);
+  }
+}
+</script>
+
+</body>
+</html>
